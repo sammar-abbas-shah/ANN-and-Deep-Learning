@@ -1,0 +1,5 @@
+# Ignore large dataset CSV files and directories
+GestureDataset_110x110x3*
+GestureDataset_32x32x1*
+GestureDataset*
+dataset_28x28x3*

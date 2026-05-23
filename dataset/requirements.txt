@@ -1,0 +1,93 @@
+# REQUIREMENTS FOR HAND GESTURE → CSV CONVERSION
+# -------------------------------------------------
+# Input: 3 folders, each containing images of one gesture class.
+# Output: three CSV files:
+#   1. GestureDataset.csv       -> each image as 28x28x3 (RGB) flattened or row-wise
+#   2. gestures_32x32x1.csv    -> each image resized to 32x32, grayscale
+#   3. gestures_110x110x3.csv  -> each image resized to 110x110, RGB
+#
+# All CSVs should have one row per image, with labels(class names or integers).
+
+
+
+# Sample code to convert hand gesture image folders into three CSV formats (28x28x3, 32x32x1, 110x110x3)
+
+import os
+import cv2
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+
+# ========== CONFIGURATION ==========
+DATASET_PATH = "path/to/your/gesture_folders"   # folder containing the 3 class subfolders
+CLASS_NAMES = ["class_1", "class_2", "class_3"] # replace with actual folder names
+OUTPUT_CSV_28x28x3 = "GestureDataset.csv"
+OUTPUT_CSV_32x32x1 = "gestures_32x32x1.csv"
+OUTPUT_CSV_110x110x3 = "gestures_110x110x3.csv"
+
+# ========== HELPER FUNCTION ==========
+def load_images_from_folders(base_path, class_list):
+    data = []  # list of (image_array, label_index, label_name)
+    for label_idx, class_name in enumerate(class_list):
+        class_path = os.path.join(base_path, class_name)
+        if not os.path.isdir(class_path):
+            print(f"Warning: {class_path} not found, skipping")
+            continue
+        for img_file in tqdm(os.listdir(class_path), desc=f"Loading {class_name}"):
+            if img_file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                img_path = os.path.join(class_path, img_file)
+                img = cv2.imread(img_path)
+                if img is not None:
+                    data.append((img, label_idx, class_name))
+    return data
+
+# ========== MAIN CONVERSION ==========
+if __name__ == "__main__":
+    # Load all images (original size)
+    print("Loading images...")
+    images_data = load_images_from_folders(DATASET_PATH, CLASS_NAMES)
+    print(f"Loaded {len(images_data)} images")
+
+    # Prepare three lists for different resizing modes
+    rows_28x28x3 = []
+    rows_32x32x1 = []
+    rows_110x110x3 = []
+
+    for img, label, label_name in tqdm(images_data, desc="Resizing & flattening"):
+        # 1) 28x28x3 (RGB)
+        resized_28 = cv2.resize(img, (28, 28), interpolation=cv2.INTER_AREA)
+        flat_28 = resized_28.flatten()  # shape = 28*28*3 = 2352
+        row_28 = list(flat_28) + [label, label_name]
+        rows_28x28x3.append(row_28)
+
+        # 2) 32x32x1 (grayscale)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        resized_32_gray = cv2.resize(gray, (32, 32), interpolation=cv2.INTER_AREA)
+        flat_32 = resized_32_gray.flatten()  # shape = 1024
+        row_32 = list(flat_32) + [label, label_name]
+        rows_32x32x1.append(row_32)
+
+        # 3) 110x110x3 (RGB)
+        resized_110 = cv2.resize(img, (110, 110), interpolation=cv2.INTER_AREA)
+        flat_110 = resized_110.flatten()  # shape = 110*110*3 = 36300
+        row_110 = list(flat_110) + [label, label_name]
+        rows_110x110x3.append(row_110)
+
+    # Save CSV files
+    # For 28x28x3
+    cols_28 = [f"pixel_{i}" for i in range(28*28*3)] + ["label", "class_name"]
+    df_28 = pd.DataFrame(rows_28x28x3, columns=cols_28)
+    df_28.to_csv(OUTPUT_CSV_28x28x3, index=False)
+    print(f"Saved {OUTPUT_CSV_28x28x3}")
+
+    # For 32x32x1
+    cols_32 = [f"pixel_{i}" for i in range(32*32)] + ["label", "class_name"]
+    df_32 = pd.DataFrame(rows_32x32x1, columns=cols_32)
+    df_32.to_csv(OUTPUT_CSV_32x32x1, index=False)
+    print(f"Saved {OUTPUT_CSV_32x32x1}")
+
+    # For 110x110x3
+    cols_110 = [f"pixel_{i}" for i in range(110*110*3)] + ["label", "class_name"]
+    df_110 = pd.DataFrame(rows_110x110x3, columns=cols_110)
+    df_110.to_csv(OUTPUT_CSV_110x110x3, index=False)
+    print(f"Saved {OUTPUT_CSV_110x110x3}")
